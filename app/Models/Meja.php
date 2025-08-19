@@ -9,7 +9,7 @@ class Meja extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nomor_meja', 'nama_reservasi', 'status'];
+    protected $fillable = ['nomor_meja', 'status'];
 
     // Relasi ke Transaksi
     public function transaksi()

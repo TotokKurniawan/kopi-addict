@@ -22,8 +22,8 @@
                                 <label for="statusMeja" class="form-label">Status</label>
                                 <select name="status" class="form-select" id="statusMeja" required>
                                     <option value="">Pilih Status</option>
-                                    <option value="tersedia">Kosong</option>
-                                    <option value="sedangdigunakan">Terisi</option>
+                                    <option value="kosong">Kosong</option>
+                                    <option value="aktif">Terisi</option>
                                 </select>
                             </div>
 

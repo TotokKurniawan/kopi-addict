@@ -24,7 +24,6 @@ Route::delete('/menu/{id}/deleteadmin', [MenuController::class, 'deleteMenuAdmin
 
 Route::get('/meja', [AdminController::class, 'meja'])->name('meja');
 Route::post('/meja/reservasiadmin/{id}', [MejaController::class, 'reservasiadmin'])->name('meja.reservasiadmin');
-Route::post('/meja/selesaiadmin/{id}', [MejaController::class, 'selesaiadmin'])->name('meja.selesaiadmin');
 
 Route::get('/tambahMenu', [AdminController::class, 'tambahMenu'])->name('tambahMenu');
 Route::post('/menu/storeadmin', [MenuController::class, 'storeMenuAdmin'])->name('storeMenuAdmin');
@@ -49,11 +48,7 @@ Route::get('/pengaturan', [AdminController::class, 'pengaturan'])->name('pengatu
 Route::post('/pengaturan/toko', [PengaturanController::class, 'simpanToko'])->name('simpanToko');
 Route::post('/pengaturan/struk', [PengaturanController::class, 'simpanStruk'])->name('simpanStruk');
 
-Route::get('/datapesanan', [AdminController::class, 'dataPesanan'])->name('datapesanan');
-Route::put('/transaksi/{id}/lunas', [AdminController::class, 'tandaiLunas'])->name('transaksi.lunas');
 Route::get('/transaksi/struklunas/{id}', [AdminController::class, 'struk'])->name('transaksi.struklunas');
-
-
 
 Route::get('/transaksi/struk/{id}', [TransaksiController::class, 'struk'])->name('transaksi.struk');
 
@@ -70,7 +65,6 @@ Route::get('/dashboardUser', [UserController::class, 'dashboard'])->name('dashbo
 
 Route::get('/mejaUser', [UserController::class, 'meja'])->name('mejaUser');
 Route::post('/meja/reservasi/{id}', [MejaController::class, 'reservasi'])->name('meja.reservasi');
-Route::post('/meja/selesai/{id}', [MejaController::class, 'selesai'])->name('meja.selesai');
 
 Route::get('/menuUser', [UserController::class, 'menu'])->name('menuUser');
 Route::put('/menu/{id}/update', [MenuController::class, 'updateMenu']);
@@ -82,17 +76,20 @@ Route::post('/menu/store', [MenuController::class, 'storeMenu'])->name('storeMen
 Route::get('/tambahMejaUser', [UserController::class, 'tambahmeja'])->name('tambahMejaUser');
 Route::post('/meja/store', [MejaController::class, 'store'])->name('meja.store');
 
-Route::get('/datapesananuser', [UserController::class, 'dataPesanan'])->name('datapesananuser');
-
-
 Route::middleware('auth')->group(function () {
     Route::get('/profileUser', [UserController::class, 'Profile'])->name('profileUser');
     Route::post('/profile/update', [ProfileController::class, 'updateProfile'])->name('profile.update');
 });
 
 Route::get('/transaksiPemesananUser', [UserController::class, 'transaksiPemesanan'])->name('transaksiPemesananUser');
-Route::post('/tambahtransaksiuser', [TransaksiController::class, 'storeuser'])->name('transaksi.storeuser')->middleware('auth');
+
+
 Route::get('/transaksi/strukuser/{id}', [TransaksiController::class, 'strukuser'])->name('transaksi.strukuser');
 
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+
+Route::post('/menu/cart', [TransaksiController::class, 'addToCart'])->name('menu.addToCart');
+
+Route::post('/menu/bayar', [TransaksiController::class, 'bayarTerpilih'])->name('menu.bayar');

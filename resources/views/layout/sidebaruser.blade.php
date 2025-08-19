@@ -47,19 +47,6 @@
                     <li class="pc-item mt-8">
                         <hr class="border-t border-gray-300 my-3" />
                     </li>
-
-                    <li class="pc-item">
-                        <a href="{{ route('datapesananuser') }}" class="pc-link">
-                            <span class="pc-micon"><i class="ti ti-report"></i></span>
-                            <span class="pc-mtext">Data Pesanan</span>
-                        </a>
-                    </li>
-
-                    <!-- Spacer / Batas bawah -->
-                    <li class="pc-item mt-8">
-                        <hr class="border-t border-gray-300 my-3" />
-                    </li>
-
                     <!-- Logout di bawah Pengaturan -->
                     <li class="pc-item mt-8">
                         <form action="{{ route('logout') }}" method="POST">

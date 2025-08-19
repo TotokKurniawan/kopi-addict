@@ -12,15 +12,13 @@ class TokoSeeder extends Seeder
         Toko::create([
             'nama_toko' => 'Coffe Addict',
             'logo_toko' => null,
-            'alamat_toko' => 'Jl. Merdeka No.1',
-            'pajak' => 10,
+            'alamat_toko' => 'Jl. Merdeka No.1'
         ]);
 
         Toko::create([
             'nama_toko' => 'Java Coffee',
             'logo_toko' => null,
-            'alamat_toko' => 'Jl. Sudirman No.2',
-            'pajak' => 12,
+            'alamat_toko' => 'Jl. Sudirman No.2'
         ]);
     }
 }

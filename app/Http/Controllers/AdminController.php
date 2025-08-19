@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart_meja;
 use App\Models\DetailTransaksi;
 use App\Models\Meja;
 use App\Models\Menu;
@@ -25,8 +26,8 @@ class AdminController extends Controller
         $pesananHariIni = Transaksi::whereDate('created_at', $today)->count();
 
         // Meja
-        $mejaTersedia = Meja::where('status', 'tersedia')->count();
-        $mejaTidakTersedia = Meja::where('status', '!=', 'tersedia')->count();
+        $mejaTersedia = Meja::where('status', operator: 'kosong')->count();
+        $mejaTidakTersedia = Meja::where('status', '!=', 'aktif')->count();
 
         // Pendapatan hari ini
         $pendapatanHariIni = Transaksi::whereDate('created_at', $today)->sum('total');
@@ -100,9 +101,9 @@ class AdminController extends Controller
     {
         $mejaId = $request->query('meja_id'); // ambil ID meja dari URL
         $menus = Menu::all(); // ambil semua menu
-        return view('admin.transaksi-pemesanan', compact('mejaId', 'menus'));
+        $cart = Cart_meja::with('menu')->where('meja_id', $mejaId)->get(); // ambil menu di cart
+        return view('admin.transaksi-pemesanan', compact('mejaId', 'menus', 'cart')); // tambahkan $cart
     }
-
     public function pengguna()
     { {
             $users = User::all(); // ambil semua pengguna
@@ -116,33 +117,68 @@ class AdminController extends Controller
         return view('admin.pengaturan', compact('toko', 'struk'));
     }
 
-
     public function laporan()
     {
-        $year = request('tahun', date('Y'));
-        $month = request('bulan', date('m'));
+        $year = request('tahun');
+        $month = request('bulan');
 
-        // Pendapatan per bulan
+        // Pendapatan per bulan (hanya jika tahun dipilih)
         $pendapatanData = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $total = Transaksi::whereYear('created_at', $year)
-                ->whereMonth('created_at', $m)
-                ->sum('total');
-            $pendapatanData[] = $total;
+        if ($year) {
+            for ($m = 1; $m <= 12; $m++) {
+                $total = Transaksi::whereYear('created_at', $year)
+                    ->whereMonth('created_at', $m)
+                    ->sum('total');
+                $pendapatanData[] = $total;
+            }
         }
 
-        $menuTerlaris = DetailTransaksi::with('menu')
-            ->whereMonth('created_at', $month)
-            ->selectRaw('menu_id, sum(qty) as total_qty')
-            ->groupBy('menu_id')
-            ->orderByDesc('total_qty')
-            ->get();
+        // Top 5 Menu Terlaris & Kurang Laris
+        $menuLabels = collect();
+        $menuData = collect();
+        $menuKurangLabels = collect();
+        $menuKurangData = collect();
 
-        $menuLabels = $menuTerlaris->pluck('menu.nama');
-        $menuData = $menuTerlaris->pluck('total_qty');
+        if ($year && $month) {
+            // 5 Terlaris
+            $menuTerlaris = DetailTransaksi::with('menu')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->selectRaw('menu_id, SUM(qty) as total_qty')
+                ->groupBy('menu_id')
+                ->orderByDesc('total_qty')
+                ->limit(5)
+                ->get();
 
-        return view('admin.laporan', compact('pendapatanData', 'menuLabels', 'menuData'));
+            $menuLabels = $menuTerlaris->pluck('menu.nama')->map(fn($n) => $n ?? 'Unknown');
+            $menuData = $menuTerlaris->pluck('total_qty')->map(fn($n) => (int)$n);
+
+            // 5 Kurang Laris
+            $menuKurangLaris = DetailTransaksi::with('menu')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->selectRaw('menu_id, SUM(qty) as total_qty')
+                ->groupBy('menu_id')
+                ->orderBy('total_qty', 'asc') // urut dari yang paling sedikit
+                ->limit(5)
+                ->get();
+
+            $menuKurangLabels = $menuKurangLaris->pluck('menu.nama')->map(fn($n) => $n ?? 'Unknown');
+            $menuKurangData = $menuKurangLaris->pluck('total_qty')->map(fn($n) => (int)$n);
+        }
+
+        return view('admin.laporan', compact(
+            'pendapatanData',
+            'menuLabels',
+            'menuData',
+            'menuKurangLabels',
+            'menuKurangData',
+            'year',
+            'month'
+        ));
     }
+
+
 
     public function profile()
     {
@@ -172,30 +208,6 @@ class AdminController extends Controller
             'admin.form.tambah-pengguna'
         );
     }
-    public function dataPesanan()
-    {
-        $transaksis = Transaksi::with(['meja', 'detail.menu'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('admin.datapesanan', compact('transaksis'));
-    }
-
-    // Tandai Lunas
-    public function tandaiLunas(Request $request, $id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
-
-        $transaksi->bayar = $transaksi->total;
-        $transaksi->status = 'lunas';
-        $transaksi->save();
-
-        return response()->json([
-            'success' => true,
-            'transaksi_id' => $transaksi->id
-        ]);
-    }
-
     // Cetak Struk PDF
     public function struk($id)
     {

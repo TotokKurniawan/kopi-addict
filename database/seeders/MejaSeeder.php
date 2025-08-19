@@ -11,19 +11,16 @@ class MejaSeeder extends Seeder
     {
         Meja::create([
             'nomor_meja' => '1',
-            'nama_reservasi' => null,
-            'status' => 'tersedia',
+            'status' => 'kosong',
         ]);
 
         Meja::create([
             'nomor_meja' => '2',
-            'nama_reservasi' => 'Malik',
-            'status' => 'sudahdipesan',
+            'status' => 'aktif',
         ]);
         Meja::create([
             'nomor_meja' => '3',
-            'nama_reservasi' => 'Siti',
-            'status' => 'sedangdigunakan',
+            'status' => 'aktif',
         ]);
     }
 }

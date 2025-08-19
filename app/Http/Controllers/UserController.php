@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart_meja;
 use App\Models\Meja;
 use App\Models\Menu;
 use App\Models\Transaksi;
@@ -19,8 +20,8 @@ class UserController extends Controller
         $pesananHariIni = Transaksi::whereDate('created_at', $today)->count();
 
         // Meja tersedia dan tidak tersedia
-        $mejaTersedia = Meja::where('status', 'tersedia')->count();
-        $mejaTidakTersedia = Meja::where('status', 'sedangdigunakan')->count();
+        $mejaTersedia = Meja::where('status', operator: 'kosong')->count();
+        $mejaTidakTersedia = Meja::where('status', operator: 'aktif')->count();
 
         // Pendapatan hari ini
         $pendapatanHariIni = Transaksi::whereDate('created_at', $today)->sum('total');
@@ -75,20 +76,13 @@ class UserController extends Controller
     {
         $mejaId = $request->query('meja_id'); // ambil ID meja dari URL
         $menus = Menu::all(); // ambil semua menu
-        return view('user.transaksi-pemesanan', compact('mejaId', 'menus'));
+        $cart = Cart_meja::with('menu')->where('meja_id', $mejaId)->get(); // ambil menu di cart
+        return view('user.transaksi-pemesanan', compact('mejaId', 'menus', 'cart')); // tambahkan $cart
     }
+
     public function profile()
     {
         $user = Auth::user();
         return view('user.profile', compact('user'));
-    }
-    public function dataPesanan()
-    {
-        // Ambil semua transaksi beserta relasi meja dan detail, urut dari terbaru
-        $transaksis = Transaksi::with(['meja', 'detail.menu'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('user.datapesanan', compact('transaksis'));
     }
 }

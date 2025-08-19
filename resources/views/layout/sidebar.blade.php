@@ -55,13 +55,6 @@
                     </li>
 
                     <li class="pc-item">
-                        <a href="{{ route('datapesanan') }}" class="pc-link">
-                            <span class="pc-micon"><i class="ti ti-report"></i></span>
-                            <span class="pc-mtext">Data Pesanan</span>
-                        </a>
-                    </li>
-
-                    <li class="pc-item">
                         <a href="{{ route('laporan') }}" class="pc-link">
                             <span class="pc-micon"><i class="ti ti-report"></i></span>
                             <span class="pc-mtext">Laporan</span>

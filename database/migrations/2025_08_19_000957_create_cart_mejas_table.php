@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('mejas', function (Blueprint $table) {
+        Schema::create('cart_mejas', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_meja');
-            $table->enum('status', allowed: ['kosong', 'aktif'])->default('kosong');
+            $table->foreignId('meja_id')->constrained('mejas')->onDelete('cascade');
+            $table->foreignId('menu_id')->constrained('menus')->onDelete('cascade');
+            $table->integer('qty')->default(1);
+            $table->integer('harga');
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('mejas');
+        Schema::dropIfExists('cart_mejas');
     }
 };

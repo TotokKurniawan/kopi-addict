@@ -14,13 +14,11 @@ class PengaturanController extends Controller
             'nama_toko' => 'required|string',
             'logo_toko' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'alamat_toko' => 'required|string',
-            'pajak' => 'required|integer|min:0',
         ]);
 
         $toko = Toko::first() ?? new Toko();
         $toko->nama_toko = $request->nama_toko;
         $toko->alamat_toko = $request->alamat_toko;
-        $toko->pajak = $request->pajak;
 
         if ($request->hasFile('logo_toko')) {
             $file = $request->file('logo_toko');

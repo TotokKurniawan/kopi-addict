@@ -2,145 +2,118 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cart_meja;
 use App\Models\DetailTransaksi;
 use App\Models\Meja;
 use App\Models\Menu;
 use App\Models\Transaksi;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // <- ini yang benar
 
 class TransaksiController extends Controller
 {
-    public function transaksiPemesanan(Request $request)
+
+    public function addToCart(Request $request)
     {
-        $mejaId = $request->query('meja_id');
-        $menus = Menu::all();
-        return view('admin.transaksi-pemesanan', compact('menus', 'mejaId'));
-    }
-    public function store(Request $request)
-    {
-        $request->validate([
-            'meja_id' => 'required|exists:mejas,id',
-            'menu_json' => 'required',
-            'pembayaran' => 'required|in:cash,qris'
-        ]);
+        $cart = Cart_meja::where('meja_id', $request->meja_id)
+            ->where('menu_id', $request->menu_id)
+            ->first();
 
-        $menuList = json_decode($request->menu_json, true);
-        $total = $request->total;
-        $bayar = $request->bayar;
-        $kembalian = $request->kembalian;
-        $status = $request->pembayaran === 'cash' ? 'lunas' : 'belum lunas';
-
-        if ($request->pembayaran === 'qris') {
-            $bayar = null;
-            $kembalian = null;
-        }
-
-        // Simpan transaksi
-        $transaksi = Transaksi::create([
-            'user_id' => auth()->id(),
-            'meja_id' => $request->meja_id,
-            'status' => $status,
-            'pembayaran' => $request->pembayaran,
-            'bayar' => $bayar,
-            'kembalian' => $kembalian,
-            'total' => $total
-        ]);
-
-        // Simpan detail transaksi
-        foreach ($menuList as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $transaksi->id,
-                'menu_id' => $item['menu_id'],
-                'qty' => $item['qty'],
-                'subtotal' => $item['harga'] * $item['qty']
+        if ($cart) {
+            // jika sudah ada, tambah qty
+            $cart->qty += 1;
+            $cart->harga = $request->harga; // update harga sesuai menu
+            $cart->save();
+        } else {
+            // jika belum ada, buat baru
+            $cart = Cart_meja::create([
+                'meja_id' => $request->meja_id,
+                'menu_id' => $request->menu_id,
+                'qty' => 1,
+                'harga' => $request->harga
             ]);
         }
 
-        // Update status meja
-        Meja::where('id', $request->meja_id)->update(['status' => 'sedangdigunakan']);
-
-        // Kembalikan JSON untuk frontend
-        return response()->json([
-            'success' => true,
-            'transaksi_id' => $transaksi->id,
-            'metode' => $request->pembayaran
-        ]);
+        return response()->json($cart);
     }
-    public function struk($id)
-    {
-        $transaksi = Transaksi::with(['detail.menu', 'user', 'meja'])->findOrFail($id);
-
-        if ($transaksi->pembayaran === 'cash') {
-            $pdf = PDF::loadView('admin.modal.struk-pdf', compact('transaksi'));
-            return $pdf->download('struk_' . $transaksi->id . '.pdf');
-        }
-
-        // Jika QRIS → redirect ke datapesanan
-        return redirect()->route('datapesanan')
-            ->with('success', 'Transaksi QRIS berhasil disimpan tanpa cetak struk.');
-    }
-    public function storeuser(Request $request)
+    public function bayarTerpilih(Request $request)
     {
         $request->validate([
             'meja_id' => 'required|exists:mejas,id',
-            'menu_json' => 'required',
-            'pembayaran' => 'required|in:cash,qris'
+            'metode' => 'required|in:cash,qris',
+            'menu' => 'required|array|min:1',
+            'menu.*.menu_id' => 'required|exists:menus,id',
+            'menu.*.qty' => 'required|integer|min:1',
+            'menu.*.harga' => 'required|integer|min:0',
+            'bayar' => 'nullable|integer|min:0',
         ]);
 
-        $menuList = json_decode($request->menu_json, true);
-        $total = $request->total;
-        $bayar = $request->bayar;
-        $kembalian = $request->kembalian;
-        $status = $request->pembayaran === 'cash' ? 'lunas' : 'belum lunas';
+        $userId = Auth::id();
+        $mejaId = $request->meja_id;
+        $metode = $request->metode;
+        $menuItems = $request->menu;
 
-        if ($request->pembayaran === 'qris') {
-            $bayar = null;
-            $kembalian = null;
+        $total = collect($menuItems)->sum(fn($item) => $item['harga'] * $item['qty']);
+        $bayar = ($metode === 'cash') ? ($request->bayar ?? 0) : $total;
+        $kembalian = ($metode === 'cash') ? max($bayar - $total, 0) : 0;
+
+        if ($metode === 'cash' && $bayar < $total) {
+            return response()->json(['success' => false, 'message' => 'Jumlah bayar kurang!'], 400);
         }
 
-        // Simpan transaksi
-        $transaksi = Transaksi::create([
-            'user_id' => auth()->id(),
-            'meja_id' => $request->meja_id,
-            'status' => $status,
-            'pembayaran' => $request->pembayaran,
-            'bayar' => $bayar,
-            'kembalian' => $kembalian,
-            'total' => $total
-        ]);
-
-        // Simpan detail transaksi
-        foreach ($menuList as $item) {
-            DetailTransaksi::create([
-                'transaksi_id' => $transaksi->id,
-                'menu_id' => $item['menu_id'],
-                'qty' => $item['qty'],
-                'subtotal' => $item['harga'] * $item['qty']
+        DB::beginTransaction();
+        try {
+            $transaksi = Transaksi::create([
+                'user_id' => $userId,
+                'meja_id' => $mejaId,
+                'status' => 'lunas',
+                'pembayaran' => $metode,
+                'bayar' => $bayar,
+                'kembalian' => $kembalian,
+                'total' => $total
             ]);
+
+            foreach ($menuItems as $item) {
+                DetailTransaksi::create([
+                    'transaksi_id' => $transaksi->id,
+                    'menu_id' => $item['menu_id'],
+                    'qty' => $item['qty'],
+                    'subtotal' => $item['harga'] * $item['qty']
+                ]);
+
+                // hapus menu dari cart
+                Cart_meja::where('meja_id', $mejaId)->where('menu_id', $item['menu_id'])->delete();
+            }
+
+            // **Cek apakah cart meja sudah kosong**
+            $sisaMenu = Cart_meja::where('meja_id', $mejaId)->count();
+            if ($sisaMenu == 0) {
+                $meja = Meja::find($mejaId);
+                $meja->status = 'kosong'; // update status meja menjadi kosong
+                $meja->save();
+            }
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil!',
+                'transaksi_id' => $transaksi->id
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
         }
-
-        // Update status meja
-        Meja::where('id', $request->meja_id)->update(['status' => 'sedangdigunakan']);
-
-        // Kembalikan JSON untuk frontend
-        return response()->json([
-            'success' => true,
-            'transaksi_id' => $transaksi->id,
-            'metode' => $request->pembayaran
-        ]);
     }
     public function strukuser($id)
     {
         $transaksi = Transaksi::with(['detail.menu', 'user', 'meja'])->findOrFail($id);
+        $pdf = PDF::loadView('admin.modal.struk-pdf', compact('transaksi'));
+        $filename = 'struk_' . $transaksi->id . '.pdf';
+        $path = storage_path('app/public/' . $filename);
+        $pdf->save($path);
 
-        if ($transaksi->pembayaran === 'cash') {
-            $pdf = PDF::loadView('admin.modal.struk-pdf', compact('transaksi'));
-            return $pdf->download('struk_' . $transaksi->id . '.pdf');
-        }
-
-        // Jika QRIS → redirect ke datapesanan
-        return redirect()->route('datapesananuser')
-            ->with('success', 'Transaksi QRIS berhasil disimpan tanpa cetak struk.');
+        return response()->json(['success' => true, 'url' => asset('storage/' . $filename)]);
     }
 }

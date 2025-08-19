@@ -47,11 +47,6 @@
                                         <label for="alamatToko" class="form-label">Alamat Toko</label>
                                         <textarea class="form-control" id="alamatToko" name="alamat_toko" rows="3" placeholder="Masukkan alamat">{{ $toko->alamat_toko ?? '' }}</textarea>
                                     </div>
-                                    <div class="mb-3">
-                                        <label for="pajakToko" class="form-label">Pajak (%)</label>
-                                        <input type="number" class="form-control" id="pajakToko" name="pajak"
-                                            value="{{ $toko->pajak ?? 0 }}" placeholder="Masukkan pajak">
-                                    </div>
                                     <button type="submit" class="btn btn-primary"
                                         style="background-color: #fc9800; color: white;">Simpan Pengaturan Toko</button>
                                 </form>
@@ -61,7 +56,6 @@
                                         <h5>Profil Toko Saat Ini</h5>
                                         <p><strong>Nama Toko:</strong> {{ $toko->nama_toko }}</p>
                                         <p><strong>Alamat:</strong> {{ $toko->alamat_toko }}</p>
-                                        <p><strong>Pajak:</strong> {{ $toko->pajak }}%</p>
                                         @if ($toko->logo_toko)
                                             <p><strong>Logo:</strong></p>
                                             <img src="{{ asset('uploads/toko/' . $toko->logo_toko) }}" alt="Logo"

@@ -87,13 +87,6 @@
                 <td class="label">Kasir</td>
                 <td class="value">{{ $transaksi->user->nama }}</td>
             </tr>
-            <tr>
-                <td colspan="2" class="separator"></td>
-            </tr>
-            <tr>
-                <td class="label">Nama Reservasi</td>
-                <td class="value">{{ $transaksi->meja->nama_reservasi ?? 'N/A' }}</td>
-            </tr>
         </table>
 
         <!-- Batas antara reservasi dan item -->
